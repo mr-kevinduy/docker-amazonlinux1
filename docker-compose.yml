@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  app:
+    build: kevinduy/amazonlinnux1
+    tty: true
+    restart: always
+    volumes:
+      - ./app:/var/www/app
+    ports:
+      - "80:80"
+      - "433:443"
