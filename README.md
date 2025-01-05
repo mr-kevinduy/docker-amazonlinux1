@@ -1,262 +1,80 @@
 # Amazon Linux AMI 2018.03 (epel 6)
 
-### docker-compose.yml
+# 1. Using
 
-```sh
-version: '3'
+`docker-compose.yml`
 
+```yaml
 services:
   app:
-    build: .
+    image: kevinduy/amazonlinnux1
     tty: true
     restart: always
     volumes:
-      - ./app:/var/www/app
+      - ./:/app
     ports:
       - "80:80"
       - "433:443"
-    command: /bin/bash -c "/install/serve.sh *:80 lv.test /var/www/app/public && /usr/bin/env bash start;sleep infinity"
-    links:
-      - db
-  db:
-    image: mysql:5.7
-    restart: always
-    command: ["mysqld", "--character-set-server=utf8", "--collation-server=utf8_general_ci", "--skip-character-set-client-handshake"]
-    volumes:
-      - ./.docker/mysql:/var/lib/mysql
-      - ./.docker/data:/var/data
-    ports:
-      - "3306:3306"
     environment:
-      MYSQL_DATABASE: laravel
-      MYSQL_ROOT_PASSWORD: root
+      - http_proxy=${HTTP_PROXY}
+      - https_proxy=${HTTPS_PROXY}
+      - CHOKIDAR_USEPOLLING=true
+      - AWS_DEFAULT_OUTPUT=json
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 ```
 
-### Configs
+`Environment`
 
 ```sh
-#!/bin/bash
+# Core env
+HTTP_PROXY=
+HTTPS_PROXY=
 
-# Check OS
-cat /etc/system-release
-
-# Set timezone to Japan
-# ls -a /usr/share/zoneinfo
-sed -i -e "s/ZONE=\"UTC\"/ZONE=\"Japan\"/g" /etc/sysconfig/clock
-ln -sf /usr/share/zoneinfo/Japan /etc/localtime
-
-reboot
+# AWS env
+AWS_DEFAULT_OUTPUT=json
+AWS_DEFAULT_REGION=ap-southeast-1
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
 ```
 
-### Install basic packages:
+# 2. Main
+
+- kevinduy/amazonlinnux1:1.0 (kevinduy/amazonlinnux1:latest)
+
+### Build and push to repository docker hub
 
 ```sh
-#!/bin/bash
+docker-compose up -d # OR: docker build -t kevinduy/amazonlinnux1 .
+docker image ls # OR: docker images
 
-# Update and install packages
-yum update -y && yum install -y \
-sudo \
-git \
-wget \
-nano \
-vim \
-telnet \
-htop \
-&& yum clean all
+# Assign tag and push
+# docker tag [OPTIONS] IMAGE[:TAG] [REGISTRYHOST/][USERNAME/]NAME[:TAG]
+# docker push NAME[:TAG]
+docker image tag kevinduy/amazonlinnux1 kevinduy/amazonlinnux1:1.0
+# -> 2 images: latest and 1.0
+docker login --username YOUR_ACCOUNT
+docker push kevinduy/amazonlinnux1
+docker push kevinduy/amazonlinnux1:1.0
 ```
 
-# Other install (have not in this Image)
+# 3. Changelog
 
-### Cron and Incron
-
-```sh
-#!/bin/bash
-
-# Update and install packages
-yum update -y && yum install -y \
-vixie-cron \
-epel-release \
-&& yum clean all
-
-# Change yum config use el in sub config. Default: latest (el7).
-sed -i "s|releasever=latest|#releasever=latest|g" /etc/yum.conf
-
-# Install incrond
-wget http://ftp.tu-chemnitz.de/pub/linux/dag/redhat/el6/en/x86_64/rpmforge/RPMS/incron-0.5.9-2.el6.rf.x86_64.rpm
-yum localinstall incron*rpm
-```
-
-### Apache 2 (httpd)
-
-```sh
-#!/bin/bash
-
-# Pre install
-yum remove -y httpd
-yum remove -y httpd-tools
-
-# Update and install packages
-yum update -y && yum install -y httpd24
-service httpd start
-```
-
-### Add user and serve
-
-```sh
-# Add user
-useradd -m deploy
-usermod -aG wheel deploy
-usermod -aG wheel apache
-
-sed -i "s|# %wheel  ALL=(ALL) NOPASSWD: ALL|%wheel  ALL=(ALL) NOPASSWD: ALL|g" /etc/sudoers
-sed -i "s|#Group apache|Group wheel|g" /etc/httpd/conf/httpd.conf
-
-chown -R apache:wheel /var/www
-chmod 2775 /var/www
-find /var/www -type d -exec sudo chmod 2775 {} \;
-find /var/www -type f -exec sudo chmod 0664 {} \;
-
-# Setup serve
-#sed -i "s|#ServerName www\.example\.com:80|ServerName $HOSTNAME:80|g" /etc/httpd/conf/httpd.conf
-
-echo "NETWORKING=yes" > /etc/sysconfig/network
-
-# ---------------- HTTPD ----------------
-# cd /var/www
-# git clone https://github.com/mr-kevinduy/lv-testing.git
-# chown -R apache:wheel /var/www/lv-testing
-# chmod 2775 /var/www/lv-testing
-# find /var/www/lv-testing -type d -exec sudo chmod 2775 {} \;
-# find /var/www/lv-testing -type f -exec sudo chmod 0664 {} \;
-# vi /etc/httpd/conf.d/lv-testing.conf
-: <<'END'
-<VirtualHost *:80>
-    ServerName localhost
-    DocumentRoot /var/www/lv-testing/public
-    ErrorLog "/var/log/httpd/lv-testing-error.log"
-    CustomLog "/var/log/httpd/lv-testing-access.log" common
-
-    <Directory "/var/www/lv-testing/public">
-        AllowOverride All
-        Require all granted
-    </Directory>
-</VirtualHost>
-END
-
-service httpd restart
-```
-
-OR
-
-```sh
-#!/bin/bash
-# Usage:
-# ./this_file.sh *:80 localhost /var/www/lv-testing/public
-
-vthost="<VirtualHost $1>
-    ServerName $2
-    DocumentRoot $3
-    ErrorLog "/var/log/httpd/$2-error.log"
-    CustomLog "/var/log/httpd/$2-access.log" common
-
-    <Directory $3>
-        AllowOverride All
-        Require all granted
-    </Directory>
-</VirtualHost>
-"
-echo "$vthost" > "/etc/httpd/conf.d/$2.conf"
-```
-
-### PHP, Composer
-
-```sh
-#!/bin/bash
-
-# Update and install packages
-yum update -y && yum install -y \
-php73 \
-php73-pdo \
-php73-mbstring \
-php73-xml \
-php73-json \
-php73-bcmath \
-php73-mysqlnd \
-&& yum clean all
-
-# Install composer
-cd ~
-curl -sS https://getcomposer.org/installer | php
-mv composer.phar /usr/local/bin/composer
-ln -s /usr/local/bin/composer /usr/bin/composer
-```
-
-### Mysql
-
-```sh
-#!/bin/bash
-
-# Update and install packages
-yum update -y
-
-# Install mysql
-# yum remove -y mysql80-community-release.noarch
-# yum localinstall -y https://dev.mysql.com/get/mysql80-community-release-el6-1.noarch.rpm
-
-# yum-config-manager --disable mysql80-community
-# yum-config-manager --enable mysql57-community
-# yum info mysql-community-server
-# mysql-community-common, mysql-community-client, mysql-community-libs
-# yum install -y mysql-community-server
-
-# service mysqld start
-# systemctl start mysqld.service
-# systemctl enable mysqld.service
-```
-
-```sh
-# ---------------- MYSQL ----------------
-# cat /var/log/mysqld.log | grep password
-# #### Default: orEVcjjsj7&l - New pass: Kevin@123
-# mysql_secure_installation
-# #### No - y - y - y -y
-# service mysqld stop
-# chkconfig mysqld on
-# service mysqld start
-# mysql -u root -p
-# show global variables like 'character%';
-# show global variables like 'collation%';
-# exit
-# vi /etc/my.cnf
-: <<'END'
-[mysqld]
-character-set-server = utf8
-collation-server = utf8_general_ci
-
-[client]
-default-character-set=utf8
-END
-# service mysqld restart
-# mysql -u root -p
-# CREATE DATABASE lv_testing CHARACTER SET utf8 COLLATE utf8_general_ci;
-# ### Create user local and remote
-# CREATE USER 'deploy'@'localhost' IDENTIFIED BY 'Kevin@123';
-# CREATE USER 'deploy'@'%' IDENTIFIED BY 'Kevin@123';
-# ### Add to manager 'lv_testing' database
-# GRANT ALL PRIVILEGES ON lv_testing.* TO 'deploy'@'localhost';
-# GRANT ALL PRIVILEGES ON lv_testing.* TO 'deploy'@'%';
-```
-
-### Nodejs
-
-```sh
-#!/bin/bash
-
-# Update and install packages
-yum update -y
-
-# Install nodejs and yarn
-curl -sL https://rpm.nodesource.com/setup_12.x | sudo -E bash -
-yum install -y nodejs
-npm install yarn -g
-```
+### [v1.0]
+- OS:               amazonlinux:1 (amazonlinux:2018.03)
+- Timezone:         Tokyo
+- Packages:
+  + wget 1.18
+  + nano version 2.5.3
+  + VIM - Vi IMproved 9.0
+  + gzip 1.5 - gunzip (gzip) 1.5
+  + zip 3.0
+  + unzip 6.00
+  + git version 2.38.4
+  + golang go1.20.12 (go version)
+  + python 2.7.18 - pip (using: python --version & pip --version)
+  + python 3.8.5 - pip3 (using: python3 --version & pip3 --version)
+  + php 7.3
+  - composer latest
+  - supervisor 4.2.5 (install by pip - python2.7) (supervisord -v)

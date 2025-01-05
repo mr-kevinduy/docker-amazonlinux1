@@ -1,8 +1,7 @@
-version: '3'
-
 services:
   app:
-    build: kevinduy/amazonlinnux1
+    image: kevinduy/amazonlinnux1
+    build: .
     tty: true
     restart: always
     volumes:
@@ -10,3 +9,11 @@ services:
     ports:
       - "80:80"
       - "433:443"
+    environment:
+      - http_proxy=${HTTP_PROXY}
+      - https_proxy=${HTTPS_PROXY}
+      - CHOKIDAR_USEPOLLING=true
+      - AWS_DEFAULT_OUTPUT=${AWS_DEFAULT_OUTPUT}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
