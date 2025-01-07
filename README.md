@@ -55,8 +55,8 @@ docker image ls # OR: docker images
 docker image tag kevinduy/amazonlinux1 kevinduy/amazonlinux1:1.0
 # -> 2 images: latest and 1.0
 docker login --username YOUR_ACCOUNT
-docker push kevinduy/amazonlinux1
 docker push kevinduy/amazonlinux1:1.0
+docker push kevinduy/amazonlinux1
 ```
 
 # 3. Changelog

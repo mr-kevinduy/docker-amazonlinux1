@@ -34,6 +34,7 @@ yum update -y && yum install -y \
 sudo \
 passwd \
 acl \
+file \
 git \
 wget \
 nano \
