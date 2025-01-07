@@ -7,7 +7,7 @@
 ```yaml
 services:
   app:
-    image: kevinduy/amazonlinnux1
+    image: kevinduy/amazonlinux1
     tty: true
     restart: always
     volumes:
@@ -41,22 +41,22 @@ AWS_SECRET_ACCESS_KEY=
 
 # 2. Main
 
-- kevinduy/amazonlinnux1:1.0 (kevinduy/amazonlinnux1:latest)
+- kevinduy/amazonlinux1:1.0 (kevinduy/amazonlinux1:latest)
 
 ### Build and push to repository docker hub
 
 ```sh
-docker-compose up -d # OR: docker build -t kevinduy/amazonlinnux1 .
+docker-compose up -d # OR: docker build -t kevinduy/amazonlinux1 .
 docker image ls # OR: docker images
 
 # Assign tag and push
 # docker tag [OPTIONS] IMAGE[:TAG] [REGISTRYHOST/][USERNAME/]NAME[:TAG]
 # docker push NAME[:TAG]
-docker image tag kevinduy/amazonlinnux1 kevinduy/amazonlinnux1:1.0
+docker image tag kevinduy/amazonlinux1 kevinduy/amazonlinux1:1.0
 # -> 2 images: latest and 1.0
 docker login --username YOUR_ACCOUNT
-docker push kevinduy/amazonlinnux1
-docker push kevinduy/amazonlinnux1:1.0
+docker push kevinduy/amazonlinux1
+docker push kevinduy/amazonlinux1:1.0
 ```
 
 # 3. Changelog

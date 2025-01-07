@@ -1,6 +1,6 @@
 services:
   app:
-    image: kevinduy/amazonlinnux1
+    image: kevinduy/amazonlinux1
     build: .
     tty: true
     restart: always
